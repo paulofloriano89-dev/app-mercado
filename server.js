@@ -10,6 +10,18 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
+// Função de tentativa automática para tratar instabilidades 503 do modelo
+async function generateContentWithRetry(params, retries = 3, delayMs = 1500) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await ai.models.generateContent(params);
+        } catch (err) {
+            if (i === retries - 1) throw err;
+            await new Promise(res => setTimeout(res, delayMs));
+        }
+    }
+}
+
 app.post('/compare', async (req, res) => {
     try {
         const { images } = req.body;
@@ -32,8 +44,7 @@ Campeão: [Nome do Produto e Peso/Volume]
 Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
 Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a menos por kg em relação ao produto mais caro.`;
 
-        // Modelo ajustado para gemini-2.0-flash-lite para máxima velocidade
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithRetry({
             model: 'gemini-2.0-flash-lite',
             contents: [promptText, ...imageParts]
         });
@@ -42,7 +53,7 @@ Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a m
 
     } catch (error) {
         console.error('Erro no servidor:', error);
-        res.status(500).json({ error: 'Erro ao processar imagens no servidor.' });
+        res.status(500).json({ error: 'Erro ao processar imagens no servidor. Tente novamente.' });
     }
 });
 

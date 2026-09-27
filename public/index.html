@@ -36,8 +36,8 @@
             color: #000;
         }
 
-        .btn-blue {
-            background-color: #3b66f5;
+        .btn-yellow {
+            background-color: #f59e0b;
             color: white;
             border: none;
             padding: 14px 20px;
@@ -45,43 +45,93 @@
             font-size: 16px;
             font-weight: 600;
             width: 100%;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .btn-green {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .btn-green:disabled {
+            background-color: #a7f3d0;
+            cursor: not-allowed;
+        }
+
+        .btn-red {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+
+        .camera-box {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .preview-grid {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+            margin-bottom: 12px;
+        }
+
+        .thumb-container {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .thumb {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #3b82f6;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-green {
-            background-color: #4ba659;
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-            margin-top: 12px;
-        }
-
-        .btn-green:disabled {
-            background-color: #a5d6a7;
-            cursor: not-allowed;
-        }
-
-        .status {
-            font-size: 14px;
-            color: #8e8e93;
-            margin: 12px 0;
-        }
-
-        .result-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-top: 24px;
-            margin-bottom: 12px;
-            color: #000;
         }
 
         .result-box {
@@ -95,10 +145,13 @@
             line-height: 1.5;
             white-space: pre-wrap;
             display: none;
+            margin-top: 16px;
         }
 
-        #fileInput {
-            display: none;
+        .status {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 12px;
         }
     </style>
 </head>
@@ -107,65 +160,117 @@
 <div class="card">
     <h1>Comparar Preços</h1>
 
-    <button class="btn-blue" onclick="document.getElementById('fileInput').click()">
-        📸 Adicionar Etiqueta
-    </button>
-    <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+    <button class="btn-yellow" id="openCamBtn" onclick="startCamera()">📸 Abrir Câmera Contínua</button>
 
+    <div class="camera-box" id="cameraBox">
+        <video id="webcam" autoplay playsinline></video>
+        <div style="padding: 10px; background: #111;">
+            <button class="btn-green" onclick="takeSnapshot()" style="margin: 0 0 8px 0;">📸 Tirar Foto Agora</button>
+            <button class="btn-red" onclick="stopCamera()" style="margin: 0;">❌ Fechar Câmera</button>
+        </div>
+    </div>
+
+    <div class="preview-grid" id="previewGrid"></div>
     <div class="status" id="statusText">0 imagens selecionadas</div>
 
-    <button class="btn-green" id="compareBtn" onclick="sendImages()" disabled>
-        Comparar Preços
-    </button>
+    <button class="btn-green" id="compareBtn" onclick="sendImages()" disabled>⚡ Comparar Preços com IA</button>
+    <button class="btn-red" id="clearBtn" onclick="clearPhotos()" style="display:none;">Limpar Todas as Fotos</button>
 
-    <div id="resultContainer" style="display: none;">
-        <div class="result-title">Melhor opção:</div>
-        <div class="result-box" id="resultBox"></div>
-    </div>
+    <div class="result-box" id="resultBox"></div>
 </div>
 
+<canvas id="canvas" style="display:none;"></canvas>
+
 <script>
-    // Lista para acumular as fotos
     let base64Images = [];
+    let videoStream = null;
 
-    function handleFiles(files) {
-        if (!files || files.length === 0) return;
+    async function startCamera() {
+        const cameraBox = document.getElementById('cameraBox');
+        const openCamBtn = document.getElementById('openCamBtn');
+        const video = document.getElementById('webcam');
 
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+            video.srcObject = videoStream;
+            cameraBox.style.display = 'block';
+            openCamBtn.style.display = 'none';
+        } catch (err) {
+            alert('Não foi possível acessar a câmera do dispositivo.');
+        }
+    }
+
+    function stopCamera() {
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+        document.getElementById('cameraBox').style.display = 'none';
+        document.getElementById('openCamBtn').style.display = 'block';
+    }
+
+    function takeSnapshot() {
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = video.videoWidth || 800;
+        canvas.height = video.videoHeight || 600;
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Comprime a foto para JPEG 70% de qualidade para evitar erros de servidor
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+        base64Images.push(compressedBase64);
+        renderThumbs();
+    }
+
+    function renderThumbs() {
+        const grid = document.getElementById('previewGrid');
         const statusText = document.getElementById('statusText');
         const compareBtn = document.getElementById('compareBtn');
+        const clearBtn = document.getElementById('clearBtn');
 
-        statusText.innerText = 'A carregar foto(s)...';
-        compareBtn.disabled = true;
-
-        let loadedCount = 0;
-        const totalNewFiles = files.length;
-
-        Array.from(files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                // Adiciona as novas fotos sem apagar as fotos anteriores
-                base64Images.push(e.target.result);
-                loadedCount++;
-
-                if (loadedCount === totalNewFiles) {
-                    statusText.innerText = `${base64Images.length} imagem(ns) selecionada(s)`;
-                    compareBtn.disabled = false;
-                }
-            };
-            reader.readAsDataURL(file);
+        grid.innerHTML = '';
+        base64Images.forEach((img, index) => {
+            const div = document.createElement('div');
+            div.className = 'thumb-container';
+            div.innerHTML = `
+                <img src="${img}" class="thumb">
+                <button class="remove-btn" onclick="removePhoto(${index})">✕</button>
+            `;
+            grid.appendChild(div);
         });
+
+        statusText.innerText = `${base64Images.length} imagem(ns) selecionada(s)`;
+        compareBtn.disabled = base64Images.length === 0;
+        clearBtn.style.display = base64Images.length > 0 ? 'block' : 'none';
+    }
+
+    function removePhoto(index) {
+        base64Images.splice(index, 1);
+        renderThumbs();
+    }
+
+    function clearPhotos() {
+        base64Images = [];
+        renderThumbs();
+        document.getElementById('resultBox').style.display = 'none';
     }
 
     async function sendImages() {
         const compareBtn = document.getElementById('compareBtn');
-        const resultContainer = document.getElementById('resultContainer');
         const resultBox = document.getElementById('resultBox');
 
         if (base64Images.length === 0) return;
 
+        stopCamera();
         compareBtn.disabled = true;
-        compareBtn.innerText = 'A analisar...';
-        resultContainer.style.display = 'none';
+        compareBtn.innerText = '⚡ A analisar etiquetas com IA...';
+        resultBox.style.display = 'none';
 
         try {
             const response = await fetch('/compare', {
@@ -178,7 +283,6 @@
 
             if (data.analysis) {
                 resultBox.innerText = data.analysis;
-                resultContainer.style.display = 'block';
                 resultBox.style.display = 'block';
             } else {
                 alert('Erro: ' + (data.error || 'Falha ao processar'));
@@ -187,7 +291,7 @@
             alert('Erro de conexão com o servidor.');
         } finally {
             compareBtn.disabled = false;
-            compareBtn.innerText = 'Comparar Preços';
+            compareBtn.innerText = '⚡ Comparar Preços com IA';
         }
     }
 </script>
