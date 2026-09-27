@@ -1,15 +1,3 @@
-const express = require('express');
-const { GoogleGenAI } = require('@google/genai');
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static('public'));
-
 app.post('/compare', async (expressReq, res) => {
     try {
         const { images } = expressReq.body;
@@ -32,19 +20,27 @@ Campeão: [Nome do Produto e Peso/Volume]
 Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
 Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a menos por kg em relação ao produto mais caro.`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
-            contents: [promptText, ...imageParts]
-        });
+        // Tenta até 3 vezes automaticamente em caso de instabilidade na API (erro 503)
+        let response;
+        let tentativas = 0;
+        while (tentativas < 3) {
+            try {
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: [promptText, ...imageParts]
+                });
+                break;
+            } catch (err) {
+                tentativas++;
+                if (tentativas >= 3) throw err;
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2 segundos antes de tentar de novo
+            }
+        }
 
         res.json({ analysis: response.text });
 
     } catch (error) {
         console.error('Erro no servidor:', error);
-        res.status(500).json({ error: error.message || 'Erro ao processar imagens.' });
+        res.status(503).json({ error: 'O serviço está temporariamente sobrecarregado. Por favor, tente novamente dentro de instantes.' });
     }
-});
-
-app.listen(port, () => {
-    console.log(`Servidor a correr na porta ${port}`);
 });
