@@ -1,3 +1,19 @@
+const express = require('express');
+const cors = require('cors');
+const { GoogleGenAI } = require('@google/genai');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Inicializa a biblioteca da IA do Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Middlewares
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.static('public'));
+
+// Rota de comparação
 app.post('/compare', async (expressReq, res) => {
     try {
         const { images } = expressReq.body;
@@ -20,7 +36,7 @@ Campeão: [Nome do Produto e Peso/Volume]
 Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
 Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a menos por kg em relação ao produto mais caro.`;
 
-        // Tenta até 3 vezes automaticamente em caso de instabilidade na API (erro 503)
+        // Tenta até 3 vezes automaticamente em caso de instabilidade (erro 503)
         let response;
         let tentativas = 0;
         while (tentativas < 3) {
@@ -33,7 +49,7 @@ Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a m
             } catch (err) {
                 tentativas++;
                 if (tentativas >= 3) throw err;
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2 segundos antes de tentar de novo
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
 
@@ -43,4 +59,8 @@ Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a m
         console.error('Erro no servidor:', error);
         res.status(503).json({ error: 'O serviço está temporariamente sobrecarregado. Por favor, tente novamente dentro de instantes.' });
     }
+});
+
+app.listen(port, () => {
+    console.log(`Servidor rodando na porta ${port}`);
 });
