@@ -125,64 +125,43 @@
 </div>
 
 <script>
+    // Lista para acumular as fotos
     let base64Images = [];
 
-    // Reduz o tamanho da imagem antes do envio para não sobrecarregar
-    function compressImage(file, maxWidth = 1024, quality = 0.7) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
+    function handleFiles(files) {
+        if (!files || files.length === 0) return;
 
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
-                };
-            };
-        });
-    }
-
-    async function handleFiles(files) {
-        base64Images = [];
         const statusText = document.getElementById('statusText');
         const compareBtn = document.getElementById('compareBtn');
 
-        if (files.length === 0) {
-            statusText.innerText = '0 imagens selecionadas';
-            compareBtn.disabled = true;
-            return;
-        }
-
-        statusText.innerText = `A preparar ${files.length} imagem(ns)...`;
+        statusText.innerText = 'A carregar foto(s)...';
         compareBtn.disabled = true;
 
-        for (let i = 0; i < files.length; i++) {
-            const compressed = await compressImage(files[i]);
-            base64Images.push(compressed);
-        }
+        let loadedCount = 0;
+        const totalNewFiles = files.length;
 
-        statusText.innerText = `${files.length} imagem(ns) selecionada(s)`;
-        compareBtn.disabled = false;
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Adiciona as novas fotos sem apagar as fotos anteriores
+                base64Images.push(e.target.result);
+                loadedCount++;
+
+                if (loadedCount === totalNewFiles) {
+                    statusText.innerText = `${base64Images.length} imagem(ns) selecionada(s)`;
+                    compareBtn.disabled = false;
+                }
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
     async function sendImages() {
         const compareBtn = document.getElementById('compareBtn');
         const resultContainer = document.getElementById('resultContainer');
         const resultBox = document.getElementById('resultBox');
+
+        if (base64Images.length === 0) return;
 
         compareBtn.disabled = true;
         compareBtn.innerText = 'A analisar...';

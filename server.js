@@ -10,9 +10,9 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
-app.post('/compare', async (expressReq, res) => {
+app.post('/compare', async (req, res) => {
     try {
-        const { images } = expressReq.body;
+        const { images } = req.body;
 
         if (!images || !Array.isArray(images) || images.length === 0) {
             return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
@@ -32,31 +32,20 @@ Campeão: [Nome do Produto e Peso/Volume]
 Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
 Economia: R$ [Diferença por kg/L/unidade em relação ao produto mais caro] a menos por kg em relação ao produto mais caro.`;
 
-        // Tenta até 3 vezes em caso de oscilação momentânea da API (erro 503)
-        let response;
-        let tentativas = 0;
-        while (tentativas < 3) {
-            try {
-                response = await ai.models.generateContent({
-                    model: 'gemini-3.8-flash',
-                    contents: [promptText, ...imageParts]
-                });
-                break;
-            } catch (err) {
-                tentativas++;
-                if (tentativas >= 3) throw err;
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        }
+        // Modelo ajustado para gemini-2.0-flash-lite para máxima velocidade
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash-lite',
+            contents: [promptText, ...imageParts]
+        });
 
         res.json({ analysis: response.text });
 
     } catch (error) {
         console.error('Erro no servidor:', error);
-        res.status(503).json({ error: 'O serviço está temporariamente sobrecarregado. Por favor, tente novamente.' });
+        res.status(500).json({ error: 'Erro ao processar imagens no servidor.' });
     }
 });
 
 app.listen(port, () => {
-    console.log(`Servidor a rodar na porta ${port}`);
+    console.log(`Servidor rodando na porta ${port}`);
 });
