@@ -31,10 +31,7 @@ app.post('/compare', async (expressReq, res) => {
         for (let imgBase64 of images) {
             // Remover o prefixo data:image/...;base64, se existir
             const base64Data = imgBase64.replace(/^data:image\/\w+;base64,/, '');
-            const buffer = Buffer.from(base64Data, 'base64');
-
-            // Opcional: redimensionar ou otimizar a imagem com o sharp se necessário, 
-            // ou converter para buffer limpo. Vamos apenas utilizá-la diretamente:
+            
             imageParts.push({
                 inlineData: {
                     data: base64Data,
@@ -45,7 +42,7 @@ app.post('/compare', async (expressReq, res) => {
 
         const promptText = "Analise estas etiquetas de preços de supermercado. Identifique os produtos, os pesos/volumes e os preços unitários/totais. Compare-as detalhadamente e indique qual é a melhor opção de compra com base no custo-benefício (preço por quilo ou unidade). Seja claro e direto.";
 
-        // Chamar o modelo Gemini (gemini-2.5-flash)
+        // Chamar o modelo Gemini atualizado e compatível
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [promptText, ...imageParts]
