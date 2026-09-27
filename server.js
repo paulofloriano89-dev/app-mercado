@@ -1,11 +1,11 @@
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Inicializa o SDK do Gemini com a chave de API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Inicializa com a chave de API das variáveis de ambiente
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -19,17 +19,12 @@ app.post('/compare', async (req, res) => {
             return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
         }
 
-        // Converte as imagens tiradas pelo Canvas para o formato esperado pelo Gemini
-        const imageParts = images.map(imgBase64 => {
-            // Remove o cabeçalho data:image/jpeg;base64, se existir
-            const cleanBase64 = imgBase64.replace(/^data:image\/\w+;base64,/, '');
-            return {
-                inlineData: {
-                    data: cleanBase64,
-                    mimeType: 'image/jpeg'
-                }
-            };
-        });
+        const imageParts = images.map(imgBase64 => ({
+            inlineData: {
+                data: imgBase64.replace(/^data:image\/\w+;base64,/, ''),
+                mimeType: 'image/jpeg'
+            }
+        }));
 
         const promptText = `Analise as etiquetas de preço enviadas e determine a opção com melhor custo-benefício (menor preço por kg, litro ou unidade).
 Responda de forma direta no seguinte formato (sem formatação em Markdown ou asteriscos):
@@ -38,18 +33,17 @@ Campeão: [Nome do Produto e Peso/Volume]
 Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
 Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`;
 
-        // Utiliza o modelo flash padrão
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        // Utiliza o modelo gemini-2.5-flash ou gemini-2.0-flash-lite
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [promptText, ...imageParts]
+        });
 
-        const result = await model.generateContent([promptText, ...imageParts]);
-        const response = await result.response;
-        const text = response.text();
-
-        res.json({ analysis: text });
+        res.json({ analysis: response.text });
 
     } catch (error) {
-        console.error('Erro detalhado no servidor:', error);
-        res.status(500).json({ error: 'Erro ao processar imagens no servidor. Verifique as chaves de API e tente novamente.' });
+        console.error('Erro no servidor:', error);
+        res.status(500).json({ error: 'Erro ao processar imagens no servidor.' });
     }
 });
 
