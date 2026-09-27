@@ -4,63 +4,61 @@ const sharp = require('sharp');
 const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
+const port = process.env.PORT || 3000;
 
-// Configuração do multer para manter os arquivos temporariamente na memória
-const upload = multer({ storage: multer.memoryStorage() });
-
-// Inicializa a IA usando a variável de ambiente segura do Render (GEMINI_API_KEY)
+// Configurar o Gemini SDK (usando a variável de ambiente GEMINI_API_KEY do Render)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Serve os arquivos estáticos da pasta 'public'
+// Aumentar o limite do corpo das requisições para aceitar várias imagens em Base64
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Servir arquivos estáticos da pasta public
 app.use(express.static('public'));
 
-app.post('/analisar', upload.array('fotos_etiquetas'), async (req, res) => {
+// Endpoint para comparar os preços usando o Gemini
+app.post('/compare', async (expressReq, res) => {
     try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'Nenhuma foto enviada.' });
+        const { images } = expressReq.body;
+
+        if (!images || !Array.isArray(images) || images.length === 0) {
+            return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
         }
 
-        // Otimização e compressão rápida de todas as imagens recebidas usando o Sharp
-        const imagensOtimizadas = await Promise.all(
-            req.files.map(async (file) => {
-                const bufferRedimensionado = await sharp(file.buffer)
-                    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-                    .jpeg({ quality: 60 })
-                    .toBuffer();
+        // Preparar as imagens para o formato esperado pelo Gemini SDK
+        const imageParts = [];
 
-                return {
-                    inlineData: {
-                        data: bufferRedimensionado.toString('base64'),
-                        mimeType: 'image/jpeg'
-                    }
-                };
-            })
-        );
+        for (let imgBase64 of images) {
+            // Remover o prefixo data:image/...;base64, se existir
+            const base64Data = imgBase64.replace(/^data:image\/\w+;base64,/, '');
+            const buffer = Buffer.from(base64Data, 'base64');
 
-        // Prompt enviado para o modelo Gemini analisar as etiquetas e encontrar a melhor opção por proporção/preço
-        const promptTexto = `Analise estas fotos de etiquetas de preços de produtos iguais ou semelhantes em tamanhos diferentes. 
-        Calcule o preço por unidade de medida (por exemplo, por quilo ou por litro) para cada etiqueta. 
-        Identifique claramente qual é o produto campeão (o que oferece o melhor custo-benefício/menor preço proporcional), 
-        informe o valor do produto e o preço unitário correspondente. 
-        Seja direto e objetivo na resposta final para exibição direta ao usuário.`;
+            // Opcional: redimensionar ou otimizar a imagem com o sharp se necessário, 
+            // ou converter para buffer limpo. Vamos apenas utilizá-la diretamente:
+            imageParts.push({
+                inlineData: {
+                    data: base64Data,
+                    mimeType: 'image/jpeg'
+                }
+            });
+        }
 
-        // Chamada real para o Gemini
+        const promptText = "Analise estas etiquetas de preços de supermercado. Identifique os produtos, os pesos/volumes e os preços unitários/totais. Compare-as detalhadamente e indique qual é a melhor opção de compra com base no custo-benefício (preço por quilo ou unidade). Seja claro e direto.";
+
+        // Chamar o modelo Gemini (gemini-2.5-flash)
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash', // Modelo rápido e eficiente para visão computacional
-            contents: [...imagensOtimizadas, promptTexto]
+            model: 'gemini-2.5-flash',
+            contents: [promptText, ...imageParts]
         });
 
-        const respostaTexto = response.text || "Não foi possível calcular o vencedor.";
-
-        res.json({ vencedor: respostaTexto });
+        res.json({ analysis: response.text });
 
     } catch (error) {
-        console.error('Erro ao processar a análise:', error);
-        res.status(500).json({ vencedor: 'Erro ao processar as imagens no servidor.' });
+        console.error('Erro no servidor ao processar imagens:', error);
+        res.status(500).json({ error: error.message || 'Erro ao processar as imagens no servidor.' });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor a rodar na porta ${PORT}`);
+app.listen(port, () => {
+    console.log(`Servidor a correr na porta ${port}`);
 });

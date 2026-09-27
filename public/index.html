@@ -3,271 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comparar Preços</title>
+    <title>Comparador de Preços</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f4f5f7;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            box-sizing: border-box;
-        }
-
-        h2 {
-            margin-top: 0;
-            font-size: 22px;
-            color: #111827;
-            margin-bottom: 20px;
-        }
-
-        .botoes-acao {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .btn {
-            border: none;
-            padding: 16px 20px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .btn-add {
-            background-color: #2563eb;
-            color: white;
-        }
-
-        .btn-analisar {
-            background-color: #16a34a;
-            color: white;
-        }
-
-        .btn-analisar:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        .btn-limpar {
-            background: transparent;
-            color: #dc2626;
-            font-size: 13px;
-            text-decoration: underline;
-            padding: 6px;
-            cursor: pointer;
-            border: none;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        .preview-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin: 16px 0;
-        }
-
-        .preview-thumb {
-            width: 70px;
-            height: 70px;
-            border-radius: 10px;
-            object-fit: cover;
-            border: 2px solid #2563eb;
-        }
-
-        #contador {
-            font-size: 14px;
-            font-weight: 500;
-            color: #4b5563;
-        }
-
-        #resultado-container {
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .titulo-resultado {
-            font-size: 15px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-
-        #resultado {
-            white-space: pre-line;
-            font-size: 15px;
-            line-height: 1.5;
-            color: #15803d;
-            background-color: #f0fdf4;
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid #bbf7d0;
-            min-height: 60px;
-        }
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: center; }
+        h1 { color: #333; font-size: 1.5rem; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input[type="file"] { display: none; }
+        .btn { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 10px 0; width: 100%; display: inline-block; font-weight: bold; text-decoration: none; }
+        .btn-success { background: #28a745; }
+        .btn-danger { background: #dc3545; padding: 6px 12px; font-size: 0.85rem; width: auto; }
+        .gallery { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
+        .thumb-container { position: relative; display: inline-block; }
+        .thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 2px solid #ddd; }
+        .remove-btn { position: absolute; top: -5px; right: -5px; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; }
+        #result { margin-top: 20px; text-align: left; background: #e9ecef; padding: 15px; border-radius: 8px; white-space: pre-wrap; font-size: 0.95rem; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h2>Comparar Preços</h2>
+        <h1>Comparar Preços</h1>
+        
+        <!-- Input com capture="environment" para abrir a câmara e multiple para permitir várias fotos seguidas -->
+        <label for="cameraInput" class="btn">📸 Tirar / Adicionar Fotos</label>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple>
 
-        <input type="file" id="fotoInput" accept="image/*" multiple onchange="adicionarFotos(this)">
+        <div class="gallery" id="gallery"></div>
 
-        <div class="botoes-acao">
-            <button id="btnAdd" class="btn btn-add" onclick="document.getElementById('fotoInput').click()">
-                📸 Adicionar Foto da Etiqueta
-            </button>
+        <button class="btn btn-success" id="compareBtn" style="display:none;" onclick="compararPrecos()">⚡ Comparar Preços</button>
+        <button class="btn btn-danger" id="clearBtn" style="display:none;" onclick="limparFotos()">Limpar fotos</button>
 
-            <button id="btnAnalisar" class="btn btn-analisar" onclick="enviarParaAnalise()" style="display: none;">
-                ⚡ Comparar Preços
-            </button>
-        </div>
-
-        <div id="contador">Nenhuma foto adicionada</div>
-        <div id="previewContainer" class="preview-container"></div>
-        <button id="btnLimpar" class="btn-limpar" onclick="limparFotos()" style="display: none;">Limpar fotos</button>
-
-        <div id="resultado-container">
-            <div class="titulo-resultado">Melhor opção:</div>
-            <div id="resultado">Adicione as fotos das etiquetas para comparar.</div>
-        </div>
+        <div id="result" style="display:none;"></div>
     </div>
 
     <script>
-        let fotosAcumuladas = [];
+        let imagensBase64 = [];
 
-        function adicionarFotos(input) {
-            if (input.files && input.files.length > 0) {
-                for (let i = 0; i < input.files.length; i++) {
-                    fotosAcumuladas.push(input.files[i]);
-                }
-                input.value = ''; 
-                atualizarInterface();
+        document.getElementById('cameraInput').addEventListener('change', function(event) {
+            const files = event.target.files;
+            if (!files) return;
+
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagensBase64.push(e.target.result);
+                    atualizarGaleria();
+                };
+                reader.readAsDataURL(file);
+            }
+            // Reseta o input para permitir selecionar novas fotos logo em seguida
+            this.value = '';
+        });
+
+        function atualizarGaleria() {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+            
+            imagensBase64.forEach((imgSrc, index) => {
+                const div = document.createElement('div');
+                div.className = 'thumb-container';
+                div.innerHTML = `
+                    <img src="${imgSrc}" class="thumb">
+                    <button class="remove-btn" onclick="removerFoto(${index})">×</button>
+                `;
+                gallery.appendChild(div);
+            });
+
+            const compareBtn = document.getElementById('compareBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            if (imagensBase64.length > 0) {
+                compareBtn.style.display = 'block';
+                clearBtn.style.display = 'inline-block';
+            } else {
+                compareBtn.style.display = 'none';
+                clearBtn.style.display = 'none';
             }
         }
 
-        function atualizarInterface() {
-            const contador = document.getElementById('contador');
-            const previewContainer = document.getElementById('previewContainer');
-            const btnAnalisar = document.getElementById('btnAnalisar');
-            const btnAdd = document.getElementById('btnAdd');
-            const btnLimpar = document.getElementById('btnLimpar');
-            const total = fotosAcumuladas.length;
-
-            previewContainer.innerHTML = '';
-
-            if (total === 0) {
-                contador.textContent = 'Nenhuma foto adicionada';
-                btnAnalisar.style.display = 'none';
-                btnLimpar.style.display = 'none';
-                btnAdd.textContent = '📸 Adicionar Foto da Etiqueta';
-            } else {
-                contador.textContent = total === 1 ? '1 foto acumulada' : `${total} fotos acumuladas`;
-                btnAnalisar.style.display = 'flex';
-                btnLimpar.style.display = 'inline-block';
-                btnAdd.textContent = '📸 Adicionar Mais Fotos';
-                btnAnalisar.textContent = `⚡ Comparar Preços (${total})`;
-            }
-
-            fotosAcumuladas.forEach((file) => {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.className = 'preview-thumb';
-                previewContainer.appendChild(img);
-            });
+        function removerFoto(index) {
+            imagensBase64.splice(index, 1);
+            atualizarGaleria();
         }
 
         function limparFotos() {
-            fotosAcumuladas = [];
-            atualizarInterface();
+            imagensBase64 = [];
+            atualizarGaleria();
+            document.getElementById('result').style.display = 'none';
         }
 
-        async function compactarImagem(file) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.src = URL.createObjectURL(file);
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    let scale = MAX_WIDTH / img.width;
-                    if (scale > 1) scale = 1;
-
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    canvas.toBlob((blob) => {
-                        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                    }, 'image/jpeg', 0.6);
-                };
-            });
-        }
-
-        async function enviarParaAnalise() {
-            const resultadoDiv = document.getElementById('resultado');
-            const btnAnalisar = document.getElementById('btnAnalisar');
-            const btnAdd = document.getElementById('btnAdd');
-
-            if (fotosAcumuladas.length === 0) return;
-
-            btnAnalisar.disabled = true;
-            btnAdd.disabled = true;
-            resultadoDiv.textContent = '⚡ Compactando e analisando etiquetas...';
+        async function compararPrecos() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = '⚡ Analisando etiquetas com IA...';
 
             try {
-                const fotosOtimizadas = await Promise.all(
-                    fotosAcumuladas.map(file => compactarImagem(file))
-                );
-
-                const formData = new FormData();
-                fotosOtimizadas.forEach((file) => {
-                    formData.append('fotos_etiquetas', file);
-                });
-
-                const response = await fetch('/analisar', {
+                const response = await fetch('/compare', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ images: imagensBase64 })
                 });
 
                 const data = await response.json();
-
                 if (response.ok) {
-                    resultadoDiv.textContent = data.vencedor;
+                    resultDiv.innerText = data.analysis;
                 } else {
-                    resultadoDiv.textContent = data.vencedor || 'Erro ao processar a solicitação.';
+                    resultDiv.innerText = 'Erro: ' + (data.error || 'Erro desconhecido no servidor.');
                 }
-            } catch (error) {
-                resultadoDiv.textContent = 'Erro de conexão com o servidor.';
-            } finally {
-                btnAnalisar.disabled = false;
-                btnAdd.disabled = false;
+            } catch (err) {
+                resultDiv.innerText = 'Erro de conexão com o servidor.';
             }
         }
     </script>
