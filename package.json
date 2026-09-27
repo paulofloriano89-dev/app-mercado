@@ -1,18 +1,14 @@
 {
-  "name": "app-mercado",
+  "name": "comparador-precos",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Comparador de preços com IA",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@google/genai": "^2.24.0",
-    "express": "^5.2.1",
-    "multer": "^2.4.0",
-    "sharp": "^0.35.5"
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "@google/genai": "^0.1.1"
   }
 }

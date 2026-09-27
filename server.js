@@ -1,11 +1,14 @@
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const cors = require('cors');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Inicializa a IA usando a variável de ambiente do Render
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
@@ -26,20 +29,23 @@ app.post('/compare', async (req, res) => {
         }));
 
         const promptText = `Analise as etiquetas de preço enviadas e determine a opção com melhor custo-benefício (menor preço por kg, litro ou unidade).
-Responda no formato:
-Campeão: [Nome do Produto e Peso]
-Preço: R$ [Preço] (R$ [Preço/kg])
-Economia: R$ [Diferença] a menos em relação ao produto mais caro.`;
+Responda de forma direta e sem formatação markdown (* ou #):
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        const result = await model.generateContent([promptText, ...imageParts]);
-        const response = await result.response;
+Campeão: [Nome do Produto e Peso/Volume]
+Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
+Economia: R$ [Diferença] a menos em relação ao mais caro.`;
 
-        res.json({ analysis: response.text() });
+        // Chamada à API oficial atualizada
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [promptText, ...imageParts]
+        });
+
+        res.json({ analysis: response.text });
 
     } catch (error) {
-        console.error('Erro no servidor:', error);
-        res.status(500).json({ error: 'Erro ao processar imagens no servidor. Tente novamente.' });
+        console.error('Erro detalhado no servidor:', error);
+        res.status(500).json({ error: 'Erro ao processar imagens no servidor. Verifique os logs.' });
     }
 });
 
