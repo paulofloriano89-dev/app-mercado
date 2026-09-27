@@ -216,12 +216,18 @@
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
 
-        canvas.width = video.videoWidth || 800;
-        canvas.height = video.videoHeight || 600;
+        // OTIMIZAÇÃO: Redimensiona a imagem para largura máxima de 800px para economizar memória e banda
+        const maxWidth = 800;
+        const videoWidth = video.videoWidth || 800;
+        const videoHeight = video.videoHeight || 600;
+        const scale = maxWidth / videoWidth;
+
+        canvas.width = maxWidth;
+        canvas.height = videoHeight * scale;
 
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Comprime a foto para JPEG 70% de qualidade para evitar erros de servidor
+        // Comprime para JPEG com 70% de qualidade
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
         base64Images.push(compressedBase64);
