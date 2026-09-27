@@ -29,7 +29,6 @@ app.post('/compare', async (expressReq, res) => {
         const imageParts = [];
 
         for (let imgBase64 of images) {
-            // Remover o prefixo data:image/...;base64, se existir
             const base64Data = imgBase64.replace(/^data:image\/\w+;base64,/, '');
             
             imageParts.push({
@@ -42,9 +41,9 @@ app.post('/compare', async (expressReq, res) => {
 
         const promptText = "Analise estas etiquetas de preços de supermercado. Identifique os produtos, os pesos/volumes e os preços unitários/totais. Compare-as detalhadamente e indique qual é a melhor opção de compra com base no custo-benefício (preço por quilo ou unidade). Seja claro e direto.";
 
-        // Chamar o modelo Gemini atualizado e compatível
+        // Chamar o modelo Gemini correto exigido pela API
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.8-flash',
             contents: [promptText, ...imageParts]
         });
 

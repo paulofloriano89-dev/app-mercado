@@ -1,58 +1,105 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparador de Preços</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: center; }
-        h1 { color: #333; font-size: 1.5rem; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input[type="file"] { display: none; }
-        .btn { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 10px 0; width: 100%; display: inline-block; font-weight: bold; text-decoration: none; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding: 15px; text-align: center; }
+        h1 { color: #333; font-size: 1.4rem; margin-bottom: 15px; }
+        .container { max-width: 480px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        /* Secção da Câmara em direto */
+        .camera-box { width: 100%; position: relative; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 10px; display: none; }
+        video { width: 100%; height: auto; display: block; }
+        
+        .btn { background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 8px 0; width: 100%; display: block; font-weight: bold; text-decoration: none; }
         .btn-success { background: #28a745; }
-        .btn-danger { background: #dc3545; padding: 6px 12px; font-size: 0.85rem; width: auto; }
-        .gallery { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-danger { background: #dc3545; }
+        
+        .gallery { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0; }
         .thumb-container { position: relative; display: inline-block; }
-        .thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 2px solid #ddd; }
-        .remove-btn { position: absolute; top: -5px; right: -5px; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; }
-        #result { margin-top: 20px; text-align: left; background: #e9ecef; padding: 15px; border-radius: 8px; white-space: pre-wrap; font-size: 0.95rem; }
+        .thumb { width: 75px; height: 75px; object-fit: cover; border-radius: 6px; border: 2px solid #ddd; }
+        .remove-btn { position: absolute; top: -6px; right: -6px; background: red; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; line-height: 20px; cursor: pointer; text-align: center; padding: 0; }
+        
+        #result { margin-top: 15px; text-align: left; background: #e9ecef; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.4; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Comparar Preços</h1>
         
-        <!-- Input com capture="environment" para abrir a câmara e multiple para permitir várias fotos seguidas -->
-        <label for="cameraInput" class="btn">📸 Tirar / Adicionar Fotos</label>
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple>
+        <!-- Botão para ligar a câmara -->
+        <button class="btn btn-warning" id="startCamBtn" onclick="ligarCamera()">📸 Abrir Câmara Contínua</button>
 
+        <!-- Preview da câmara e botão de disparo rápido -->
+        <div class="camera-box" id="cameraBox">
+            <video id="video" autoplay playsinline></video>
+            <button class="btn btn-success" onclick="tirarFoto()">🔘 Tirar Foto Agora</button>
+            <button class="btn btn-danger" onclick="fecharCamera()" style="margin-top: 0;">✖ Fechar Câmara</button>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <!-- Galeria de fotos capturadas -->
         <div class="gallery" id="gallery"></div>
 
-        <button class="btn btn-success" id="compareBtn" style="display:none;" onclick="compararPrecos()">⚡ Comparar Preços</button>
-        <button class="btn btn-danger" id="clearBtn" style="display:none;" onclick="limparFotos()">Limpar fotos</button>
+        <button class="btn btn-success" id="compareBtn" style="display:none;" onclick="compararPrecos()">⚡ Comparar Preços com IA</button>
+        <button class="btn btn-danger" id="clearBtn" style="display:none;" onclick="limparFotos()">Limpar Todas as Fotos</button>
 
         <div id="result" style="display:none;"></div>
     </div>
 
     <script>
         let imagensBase64 = [];
+        let videoStream = null;
 
-        document.getElementById('cameraInput').addEventListener('change', function(event) {
-            const files = event.target.files;
-            if (!files) return;
+        async function ligarCamera() {
+            const cameraBox = document.getElementById('cameraBox');
+            const startBtn = document.getElementById('startCamBtn');
+            const video = document.getElementById('video');
 
-            for (let file of files) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagensBase64.push(e.target.result);
-                    atualizarGaleria();
-                };
-                reader.readAsDataURL(file);
+            cameraBox.style.display = 'block';
+            startBtn.style.display = 'none';
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+                video.srcObject = videoStream;
+            } catch (err) {
+                alert('Erro ao aceder à câmara: ' + err.message);
+                fecharCamera();
             }
-            // Reseta o input para permitir selecionar novas fotos logo em seguida
-            this.value = '';
-        });
+        }
+
+        function fecharCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            document.getElementById('cameraBox').style.display = 'none';
+            document.getElementById('startCamBtn').style.display = 'block';
+        }
+
+        function tirarFoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            imagensBase64.push(dataUrl);
+            atualizarGaleria();
+        }
 
         function atualizarGaleria() {
             const gallery = document.getElementById('gallery');
@@ -93,7 +140,7 @@
         async function compararPrecos() {
             const resultDiv = document.getElementById('result');
             resultDiv.style.display = 'block';
-            resultDiv.innerText = '⚡ Analisando etiquetas com IA...';
+            resultDiv.innerText = '⚡ A analisar etiquetas com IA...';
 
             try {
                 const response = await fetch('/compare', {
