@@ -5,7 +5,6 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// O trim() remove espaços em branco ou quebras de linha copiadas por engano na chave
 const apiKey = (process.env.GEMINI_API_KEY || '').trim();
 const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -39,7 +38,8 @@ Campeão: [Nome do Produto e Peso/Volume]
 Preço: R$ [Preço Total] (R$ [Preço por kg/L/unidade]/kg)
 Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`;
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        // CORREÇÃO: Utilização do sufixo -latest para garantir que a API encontra o modelo
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const result = await model.generateContent([promptText, ...imageParts]);
         const response = await result.response;
@@ -49,7 +49,6 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`;
 
     } catch (error) {
         console.error('Erro na chamada da API:', error);
-        // AQUI ESTÁ O TRUQUE: Envia o erro oficial da Google para a app
         res.status(500).json({ error: `[ERRO DA GOOGLE]: ${error.message}` });
     }
 });
