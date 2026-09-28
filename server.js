@@ -5,10 +5,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const app = express();
 const port = process.env.PORT || 3000;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// O trim() remove espaços em branco ou quebras de linha copiadas por engano na chave
+const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+const genAI = new GoogleGenerativeAI(apiKey);
 
 app.use(cors());
-// Aumentado o limite do JSON para garantir que nenhuma foto seja cortada
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static('public'));
@@ -21,11 +22,8 @@ app.post('/compare', async (req, res) => {
             return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
         }
 
-        // Converte cada imagem Base64 garantindo a limpeza correta do cabeçalho
         const imageParts = images.map((imgBase64) => {
-            // Separa o cabeçalho data:image/... do conteúdo base64 puro
             const base64Data = imgBase64.includes(',') ? imgBase64.split(',')[1] : imgBase64;
-
             return {
                 inlineData: {
                     data: base64Data,
@@ -51,10 +49,11 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`;
 
     } catch (error) {
         console.error('Erro na chamada da API:', error);
-        res.status(500).json({ error: 'Falha ao processar as imagens na IA. Tente novamente.' });
+        // AQUI ESTÁ O TRUQUE: Envia o erro oficial da Google para a app
+        res.status(500).json({ error: `[ERRO DA GOOGLE]: ${error.message}` });
     }
 });
 
 app.listen(port, () => {
-    console.log(`Servidor rodando na porta ${port}`);
+    console.log(`Servidor a correr na porta ${port}`);
 });
