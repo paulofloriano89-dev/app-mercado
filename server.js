@@ -20,7 +20,6 @@ app.post('/compare', async (req, res) => {
             return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
         }
 
-        // 1. Monta o texto do pedido
         const parts = [
             {
                 text: `Analise as etiquetas de preço enviadas e determine a opção com melhor custo-benefício (menor preço por kg, litro ou unidade).
@@ -32,7 +31,6 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`
             }
         ];
 
-        // 2. Adiciona as imagens no formato exato que a API REST da Google exige
         images.forEach((imgBase64) => {
             const base64Data = imgBase64.includes(',') ? imgBase64.split(',')[1] : imgBase64;
             parts.push({
@@ -43,8 +41,8 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`
             });
         });
 
-        // 3. Faz a chamada direta à API (sem usar a biblioteca que estava a causar o erro)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        // ALTERAÇÃO: Utiliza o modelo gemini-1.5-pro, que é mais robusto e aceite globalmente
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts }] })
@@ -52,7 +50,6 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`
 
         const data = await response.json();
 
-        // 4. Verifica se a Google devolveu algum erro
         if (!response.ok) {
             console.error('Erro da API:', data);
             return res.status(500).json({ 
@@ -60,7 +57,6 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`
             });
         }
 
-        // 5. Extrai e devolve o texto analisado
         const text = data.candidates[0].content.parts[0].text;
         res.json({ analysis: text });
 
