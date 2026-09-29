@@ -38,8 +38,8 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`
             });
         });
 
-        // Chamada única, direta e ultra rápida usando o modelo padrão oficial
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        // Utilizando o modelo atual gemini-2.5-flash compatível com o endpoint v1
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts }] })
