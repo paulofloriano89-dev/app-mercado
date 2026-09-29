@@ -38,8 +38,8 @@ Economia: R$ [Diferença] a menos por kg em relação ao produto mais caro.`
             });
         });
 
-        // Utilizando o modelo atual gemini-2.5-flash compatível com o endpoint v1
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        // Testando com o modelo gemini-3.5-flash correspondente à sua interface
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts }] })
